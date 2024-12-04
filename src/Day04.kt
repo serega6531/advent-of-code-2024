@@ -41,7 +41,23 @@ fun main() {
     }
 
     fun part2(input: List<String>): Int {
-        TODO()
+        val maxY = input.lastIndex
+        val maxX = input.first().lastIndex
+
+        fun isCenterOfWord(x: Int, y: Int): Boolean {
+            if (input[y][x] != 'A') return false
+
+            val diagonal1 = setOf(input[y - 1][x - 1], input[y + 1][x + 1]) == setOf('M', 'S')
+            val diagonal2 = setOf(input[y - 1][x + 1], input[y + 1][x - 1]) == setOf('M', 'S')
+
+            return diagonal1 && diagonal2
+        }
+
+        return (1..maxX - 1).sumOf { x ->
+            (1..maxY - 1).count { y ->
+                isCenterOfWord(x, y)
+            }
+        }
     }
 
     val testInput = readInput("Day04_test")
