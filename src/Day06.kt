@@ -57,8 +57,35 @@ fun main() {
     }
 
 
+    fun becomesLoop(map: List<String>, obstacleY: Int, obstacleX: Int): Boolean {
+        if (map[obstacleY][obstacleX] == '#' || map[obstacleY][obstacleX] == '^') {
+            // already an obstacle or a starting position
+            return false
+        }
+
+        val seenStates = mutableSetOf<PathingState>()
+        val updatedMap = map.toMutableList().apply {
+            set(obstacleY, get(obstacleY).replaceRange(obstacleX, obstacleX + 1, "#"))
+        }
+
+        pathGenerator(updatedMap).forEach { state ->
+            if (!seenStates.add(state)) {
+                return true
+            }
+        }
+
+        return false
+    }
+
     fun part2(input: List<String>): Int {
-        TODO()
+        val maxY = input.lastIndex
+        val maxX = input.first().lastIndex
+
+        return (0..maxY).sumOf { obstacleY ->
+            (0..maxX).count { obstacleX ->
+                becomesLoop(input, obstacleY, obstacleX)
+            }
+        }
     }
 
     val testInput = readInput("Day06_test")
@@ -67,7 +94,7 @@ fun main() {
     val input = readInput("Day06")
     part1(input).println()
 
-    check(part2(testInput) == 123)
+    check(part2(testInput) == 6)
     part2(input).println()
 }
 
