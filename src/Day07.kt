@@ -10,6 +10,10 @@ fun main() {
             return operands.single() == goal
         }
 
+        if (operands.first() > goal) {
+            return false
+        }
+
         return operators.any { op ->
             val newOperand = op.invoke(operands[0], operands[1])
             val updatedOperands = listOf(newOperand, *operands.subList(2, operands.size).toTypedArray())
