@@ -20,8 +20,8 @@ fun main() {
         }
     }
 
-    fun calculateChecksum(compressed: List<Int>): Long = compressed.withIndex()
-        .sumOf { (index, value) -> (index * value).toLong() }
+    fun calculateChecksum(compressed: List<Int?>): Long = compressed.withIndex()
+        .sumOf { (index, value) -> (index * (value ?: 0)).toLong() }
 
     fun part1(input: String): Long {
         fun compressLayout(layout: List<Int?>): List<Int> {
@@ -51,7 +51,87 @@ fun main() {
     }
 
     fun part2(input: String): Long {
-        TODO()
+        fun calculateBlockStartsByIndex(): Map<Int, Int> {
+            return buildMap {
+                var current = 0
+                var fileNext = true
+
+                input.forEachIndexed { index, c ->
+                    val size = c.digitToInt()
+
+                    if (index % 2 == 0) {
+                        put(index, current)
+                    }
+
+                    current += size
+                    fileNext = !fileNext
+                }
+            }
+        }
+
+        fun calculateEmptySpacesIndexes(): NavigableMap<Int, PriorityQueue<Int>> {
+            val result = TreeMap<Int, PriorityQueue<Int>>()
+
+            var fileNext = true
+            var index = 0
+
+            input.forEach { c ->
+                val size = c.digitToInt()
+
+                if (size > 0 && !fileNext) {
+                    result.computeIfAbsent(size) { PriorityQueue() }.add(index)
+                }
+
+                index += size
+                fileNext = !fileNext
+            }
+
+            return result
+        }
+
+        val layout = buildLayout(input).toMutableList()
+        val blockStartsByIndex = calculateBlockStartsByIndex()
+        val emptySpacesIndexes = calculateEmptySpacesIndexes()
+
+        fun moveBlock(blockStart: Int, size: Int, newIndex: Int) {
+            repeat(size) { offset ->
+                layout[newIndex + offset] = layout[blockStart + offset]
+                layout[blockStart + offset] = null
+            }
+        }
+
+        fun moveBlockToFreeSpace(blockStart: Int, blockSize: Int) {
+            val subMap = emptySpacesIndexes.tailMap(blockSize, true)
+            if (subMap.isEmpty()) return
+
+            val (spaceSize, queue) =  subMap.entries.minBy { (_, queue) -> queue.peek() }
+
+            if (queue.peek() > blockStart) return
+            val spaceIndex = queue.remove()
+
+            if (queue.isEmpty()) {
+                emptySpacesIndexes.remove(spaceSize)
+            }
+
+            if (spaceSize != blockSize) {
+                val remainingSpace = spaceSize - blockSize
+                val newSpaceIndex = spaceIndex + blockSize
+                emptySpacesIndexes.computeIfAbsent(remainingSpace) { PriorityQueue() }.add(newSpaceIndex)
+            }
+
+            moveBlock(blockStart, blockSize, spaceIndex)
+        }
+
+        input.withIndex()
+            .reversed()
+            .filter { (index, _) -> index % 2 == 0 }
+            .forEach { (index, p) ->
+                val blockSize = p.digitToInt()
+                val blockStart = blockStartsByIndex.getValue(index)
+                moveBlockToFreeSpace(blockStart, blockSize)
+            }
+
+        return calculateChecksum(layout)
     }
 
     val testInput = readEntireInput("Day09_test")
