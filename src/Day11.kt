@@ -1,49 +1,60 @@
 fun main() {
 
-    fun parseInput(input: String): List<Long> {
-        return input.split(" ").map { it.toLong() }
+    fun buildCounts(input: String): Map<Long, Long> {
+        return input.split(" ")
+            .map { it.toLong() }
+            .groupingBy { it }
+            .eachCount()
+            .mapValues { (_, v) -> v.toLong() }
     }
 
-    fun step(stones: List<Long>): List<Long> {
-        val result = ArrayList<Long>(stones.size)
+    fun step(stones: Map<Long, Long>): Map<Long, Long> {
+        val result = mutableMapOf<Long, Long>()
 
-        stones.forEach { stone ->
+        fun addStones(value: Long, count: Long) {
+            result.merge(value, count) { a, b -> a + b }
+        }
+
+        stones.forEach { (stone, count) ->
             val asString = stone.toString()
 
             when {
-                stone == 0L -> result.add(1L)
+                stone == 0L -> addStones(1L, count)
                 asString.length % 2L == 0L -> {
                     val cut = asString.length / 2
                     val left = asString.substring(0, cut).toLong()
                     val right = asString.substring(cut).toLong()
-                    result.add(left)
-                    result.add(right)
+                    addStones(left, count)
+                    addStones(right, count)
                 }
-                else -> {
-                    result.add(stone * 2024)
-                }
+
+                else -> addStones(stone * 2024, count)
             }
         }
 
         return result
     }
 
-    fun part1(input: String): Int {
-        var stones = parseInput(input)
+    fun solve(input: String, steps: Int): Long {
+        var stones = buildCounts(input)
 
-        repeat(25) {
+        repeat(steps) {
             stones = step(stones)
         }
 
-        return stones.size
+        return stones.values.sum()
     }
 
-    fun part2(input: String): Int {
-        TODO()
+    fun part1(input: String): Long {
+        return solve(input, 25)
+    }
+
+    fun part2(input: String): Long {
+        return solve(input, 75)
     }
 
     val testInput = readEntireInput("Day11_test")
-    check(part1(testInput) == 55312)
+    check(part1(testInput) == 55312L)
 
     val input = readEntireInput("Day11")
     part1(input).println()
