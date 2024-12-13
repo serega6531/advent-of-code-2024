@@ -8,6 +8,11 @@ sourceSets {
     }
 }
 
+dependencies {
+    implementation("org.jetbrains.kotlinx:multik-core:0.2.3")
+    implementation("org.jetbrains.kotlinx:multik-default:0.2.3")
+}
+
 tasks {
     wrapper {
         gradleVersion = "8.11.1"
