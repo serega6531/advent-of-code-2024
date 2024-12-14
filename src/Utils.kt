@@ -20,4 +20,6 @@ fun <T: Any> List<T?>.asNotNull(): List<T> {
     return this as List<T>
 }
 
-typealias YX = Pair<Int, Int>
+data class YX(val y: Int, val x: Int) {
+    override fun toString(): String = "($y, $x)"
+}

@@ -50,7 +50,7 @@ fun main() {
             }
         }
 
-        step(start.first, start.second)
+        step(start.y, start.x)
     }
 
     fun part1(input: List<String>): Int {
