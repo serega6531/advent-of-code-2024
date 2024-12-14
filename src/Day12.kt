@@ -1,10 +1,24 @@
 fun main() {
 
-    val directions = listOf<Pair<Int, Int>>(
-        -1 to 0,
-        1 to 0,
-        0 to -1,
-        0 to 1
+    val cardinals = listOf<DirectionOffset>(
+        DirectionOffset(-1, 0),
+        DirectionOffset(0, 1),
+        DirectionOffset(1, 0),
+        DirectionOffset(0, -1)
+    )
+
+    val diagonals = listOf<DirectionOffset>(
+        DirectionOffset(-1, -1),
+        DirectionOffset(-1, 1),
+        DirectionOffset(1, -1),
+        DirectionOffset(1, 1)
+    )
+
+    val adjacentDirections = listOf<Pair<DirectionOffset, DirectionOffset>>(
+        cardinals[0] to cardinals[1],
+        cardinals[1] to cardinals[2],
+        cardinals[2] to cardinals[3],
+        cardinals[3] to cardinals[0]
     )
 
     fun calculateRegions(input: List<String>): List<Set<YX>> {
@@ -17,7 +31,7 @@ fun main() {
             seen.add(YX(y, x))
             plots.add(YX(y, x))
 
-            directions.forEach { (dy, dx) ->
+            cardinals.forEach { (dy, dx) ->
                 val newY = y + dy
                 val newX = x + dx
 
@@ -45,12 +59,12 @@ fun main() {
         val regions = calculateRegions(input)
 
         fun calculatePrice(region: Set<YX>): Int {
-            fun calculateEdges(y: Int, x: Int): Int {
-                return directions.count { (dy, dx) -> YX(y + dy, x + dx) !in region }
+            fun countEdges(y: Int, x: Int): Int {
+                return cardinals.count { (dy, dx) -> YX(y + dy, x + dx) !in region }
             }
 
             val area = region.size
-            val perimeter = region.sumOf { (y, x) -> calculateEdges(y, x) }
+            val perimeter = region.sumOf { (y, x) -> countEdges(y, x) }
 
             return area * perimeter
         }
@@ -59,7 +73,38 @@ fun main() {
     }
 
     fun part2(input: List<String>): Int {
-        TODO()
+        val regions = calculateRegions(input)
+
+        fun calculatePrice(region: Set<YX>): Int {
+            fun countCornersForPlot(y: Int, x: Int): Int {
+                val sameRegionDirections: Set<DirectionOffset> =
+                    (cardinals + diagonals).filterTo(mutableSetOf()) { (dy, dx) ->
+                        region.contains(YX(y + dy, x + dx))
+                    }
+
+                val inAngles = adjacentDirections.count { (first, second) ->
+                    first !in sameRegionDirections && second !in sameRegionDirections
+                }
+
+                val outAngles = adjacentDirections.count { (first, second) ->
+                    val diagonal = DirectionOffset(first.dy + second.dy, first.dx + second.dx)
+                    first in sameRegionDirections && second in sameRegionDirections && diagonal !in sameRegionDirections
+                }
+
+                return inAngles + outAngles
+            }
+
+            fun countCorners(): Int {
+                return region.sumOf { (y, x) -> countCornersForPlot(y, x) }
+            }
+
+            val area = region.size
+            val sides = countCorners() // there are the same number of corners and sides
+
+            return area * sides
+        }
+
+        return regions.sumOf { calculatePrice(it) }
     }
 
     val testInput = readInput("Day12_test")
@@ -71,3 +116,5 @@ fun main() {
     check(part2(testInput) == 1206)
     part2(input).println()
 }
+
+private data class DirectionOffset(val dy: Int, val dx: Int)
