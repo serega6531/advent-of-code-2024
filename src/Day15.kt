@@ -1,16 +1,16 @@
 fun main() {
 
-    fun charToDirection(c: Char): Pair<Int, Int> {
+    fun charToDirection(c: Char): DirectionOffset {
         return when (c) {
-            '^' -> Pair(-1, 0)
-            'v' -> Pair(1, 0)
-            '<' -> Pair(0, -1)
-            '>' -> Pair(0, 1)
+            '^' -> DirectionOffset(-1, 0)
+            'v' -> DirectionOffset(1, 0)
+            '<' -> DirectionOffset(0, -1)
+            '>' -> DirectionOffset(0, 1)
             else -> throw IllegalArgumentException("Invalid direction $c")
         }
     }
 
-    fun parseMovements(input: String): List<Pair<Int, Int>> {
+    fun parseMovements(input: String): List<DirectionOffset> {
         return input.filter { it in setOf('^', 'v', '<', '>') }
             .map { charToDirection(it) }
     }
@@ -105,14 +105,14 @@ private class Map(
         }
     }
 
-    private fun canBeMoved(y: Int, x: Int, direction: Pair<Int, Int>): Boolean {
+    private fun canBeMoved(y: Int, x: Int, direction: DirectionOffset): Boolean {
         val obj = data[y][x]
         if (obj == MapObject.WALL || obj == MapObject.EMPTY) {
             return false
         }
 
-        val nextY = y + direction.first
-        val nextX = x + direction.second
+        val nextY = y + direction.dy
+        val nextX = x + direction.dx
 
         if (nextY !in 0..maxY || nextX !in 0..maxX) {
             return false
@@ -121,8 +121,8 @@ private class Map(
         return data[nextY][nextX] == MapObject.EMPTY || canBeMovedWide(nextY, nextX, direction)
     }
 
-    private fun canBeMovedWide(y: Int, x: Int, direction: Pair<Int, Int>): Boolean {
-        if (direction.second != 0) { // horizontal movement
+    private fun canBeMovedWide(y: Int, x: Int, direction: DirectionOffset): Boolean {
+        if (direction.dx != 0) { // horizontal movement
             return canBeMoved(y, x, direction)
         }
 
@@ -134,14 +134,14 @@ private class Map(
         }
     }
 
-    private fun move(y: Int, x: Int, direction: Pair<Int, Int>) {
+    private fun move(y: Int, x: Int, direction: DirectionOffset) {
         val obj = data[y][x]
         if (obj == MapObject.WALL || obj == MapObject.EMPTY) {
             return
         }
 
-        val nextY = y + direction.first
-        val nextX = x + direction.second
+        val nextY = y + direction.dy
+        val nextX = x + direction.dx
 
         if (nextY !in 0..maxY || nextX !in 0..maxX) {
             return
@@ -154,8 +154,8 @@ private class Map(
         }
     }
 
-    private fun moveWide(y: Int, x: Int, direction: Pair<Int, Int>) {
-        if (direction.second != 0) { // horizontal movement
+    private fun moveWide(y: Int, x: Int, direction: DirectionOffset) {
+        if (direction.dx != 0) { // horizontal movement
             return move(y, x, direction)
         }
 
@@ -175,7 +175,7 @@ private class Map(
         }
     }
 
-    fun tryMove(y: Int, x: Int, direction: Pair<Int, Int>) {
+    fun tryMove(y: Int, x: Int, direction: DirectionOffset) {
         if (canBeMovedWide(y, x, direction)) {
             moveWide(y, x, direction)
         }

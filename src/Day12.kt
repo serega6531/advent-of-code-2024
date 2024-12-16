@@ -116,5 +116,3 @@ fun main() {
     check(part2(testInput) == 1206)
     part2(input).println()
 }
-
-private data class DirectionOffset(val dy: Int, val dx: Int)

@@ -3,15 +3,15 @@ fun main() {
         val maxY = input.lastIndex
         val maxX = input.first().lastIndex
 
-        val offsets: List<Pair<Int, Int>> = listOf(
-            1 to 0,  // right
-            0 to 1,  // down
-            -1 to 0, // left
-            0 to -1, // up
-            1 to 1,  // right down
-            1 to -1, // right up
-            -1 to 1, // left down
-            -1 to -1 // left up
+        val offsets: List<DirectionOffset> = listOf(
+            DirectionOffset(1, 0),  // right
+            DirectionOffset(0, 1),  // down
+            DirectionOffset(-1, 0), // left
+            DirectionOffset(0, -1), // up
+            DirectionOffset(1, 1),  // right down
+            DirectionOffset(1, -1), // right up
+            DirectionOffset(-1, 1), // left down
+            DirectionOffset(-1, -1) // left up
         )
 
         fun hasWordAt(x: Int, y: Int, dx: Int, dy: Int): Boolean {
@@ -30,7 +30,7 @@ fun main() {
         }
 
         fun countWordsAt(x: Int, y: Int): Int {
-            return offsets.count { (dx, dy) -> hasWordAt(x, y, dx, dy) }
+            return offsets.count { (dy, dx) -> hasWordAt(x, y, dx, dy) }
         }
 
         return (0..maxX).sumOf { x ->

@@ -23,3 +23,5 @@ fun <T: Any> List<T?>.asNotNull(): List<T> {
 data class YX(val y: Int, val x: Int) {
     override fun toString(): String = "($y, $x)"
 }
+
+data class DirectionOffset(val dy: Int, val dx: Int)

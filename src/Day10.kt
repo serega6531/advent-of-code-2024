@@ -1,10 +1,10 @@
 fun main() {
 
-    val directions = listOf<Pair<Int, Int>>(
-        -1 to 0,
-        1 to 0,
-        0 to -1,
-        0 to 1
+    val directions = listOf<DirectionOffset>(
+        DirectionOffset(-1, 0),
+        DirectionOffset(1, 0),
+        DirectionOffset(0, -1),
+        DirectionOffset(0, 1)
     )
 
     fun parseMap(input: List<String>): List<List<Int>> {
