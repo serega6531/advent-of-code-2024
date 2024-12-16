@@ -84,11 +84,9 @@ private class Map(
         get() = data.first().lastIndex
 
     fun findPlayer(): YX {
-        data.forEachIndexed { y, row ->
-            row.forEachIndexed { x, col ->
-                if (col == MapObject.PLAYER) {
-                    return YX(y, x)
-                }
+        data.forEachIndexed { y, x, col ->
+            if (col == MapObject.PLAYER) {
+                return YX(y, x)
             }
         }
 

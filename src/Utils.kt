@@ -14,6 +14,23 @@ fun readEntireInput(name: String) = Path("src/$name.txt").readText().trim()
  */
 fun Any?.println() = println(this)
 
+inline fun <T> Iterable<Iterable<T>>.forEachIndexed(action: (y: Int, x: Int, T) -> Unit) {
+    this.forEachIndexed { y, line ->
+        line.forEachIndexed { x, item ->
+            action(y, x, item)
+        }
+    }
+}
+
+@JvmName("forEachIndexedString")
+inline fun Iterable<String>.forEachIndexed(action: (y: Int, x: Int, Char) -> Unit) {
+    this.forEachIndexed { y, line ->
+        line.forEachIndexed { x, item ->
+            action(y, x, item)
+        }
+    }
+}
+
 fun <T: Any> List<T?>.asNotNull(): List<T> {
     this.forEach { check(it != null) }
     @Suppress("UNCHECKED_CAST")

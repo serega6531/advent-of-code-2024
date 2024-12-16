@@ -1,11 +1,9 @@
 fun main() {
 
     fun findStart(map: List<String>): YX {
-        map.forEachIndexed { y, line ->
-            line.forEachIndexed { x, ch ->
-                if (ch == '^') {
-                    return YX(y, x)
-                }
+        map.forEachIndexed { y, x, ch ->
+            if (ch == '^') {
+                return YX(y, x)
             }
         }
 

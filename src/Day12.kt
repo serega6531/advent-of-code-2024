@@ -42,14 +42,11 @@ fun main() {
         }
 
         return buildList {
-            (0..maxY).forEach { y ->
-                (0..maxX).forEach { x ->
-                    val plant = input[y][x]
-                    if (YX(y, x) !in seen) {
-                        val newRegion = mutableSetOf<YX>()
-                        expandRegion(y, x, plant, newRegion)
-                        add(newRegion)
-                    }
+            input.forEachIndexed { y, x, plant ->
+                if (YX(y, x) !in seen) {
+                    val newRegion = mutableSetOf<YX>()
+                    expandRegion(y, x, plant, newRegion)
+                    add(newRegion)
                 }
             }
         }

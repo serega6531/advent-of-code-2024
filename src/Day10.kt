@@ -15,14 +15,9 @@ fun main() {
 
     fun findStarts(map: List<List<Int>>): List<YX> {
         return buildList {
-            val maxY = map.lastIndex
-            val maxX = map.first().lastIndex
-
-            (0..maxY).forEach { y ->
-                (0..maxX).forEach { x ->
-                    if (map[y][x] == 0) {
-                        add(YX(y, x))
-                    }
+            map.forEachIndexed { y, x, value ->
+                if (value == 0) {
+                    add(YX(y, x))
                 }
             }
         }
