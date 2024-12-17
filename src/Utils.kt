@@ -31,6 +31,18 @@ inline fun Iterable<String>.forEachIndexed(action: (y: Int, x: Int, Char) -> Uni
     }
 }
 
+fun List<String>.inBounds(yx: YX): Boolean {
+    val (y, x) = yx
+    val maxY = this.lastIndex
+    val maxX = this.first().lastIndex
+
+    return y in 0..maxY && x in 0..maxX
+}
+
+operator fun List<String>.get(yx: YX): Char {
+    return this[yx.y][yx.x]
+}
+
 fun <T: Any> List<T?>.asNotNull(): List<T> {
     this.forEach { check(it != null) }
     @Suppress("UNCHECKED_CAST")
@@ -39,6 +51,10 @@ fun <T: Any> List<T?>.asNotNull(): List<T> {
 
 data class YX(val y: Int, val x: Int) {
     override fun toString(): String = "($y, $x)"
+
+    operator fun plus(dir: DirectionOffset): YX {
+        return YX(this.y + dir.dy, this.x + dir.dx)
+    }
 }
 
 data class DirectionOffset(val dy: Int, val dx: Int)
