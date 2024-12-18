@@ -51,8 +51,22 @@ fun main() {
         return cost
     }
 
-    fun part2(input: List<String>, fieldSize: Int) {
-        TODO()
+    fun part2(input: List<String>, fieldSize: Int, startingBytes: Int): String {
+        fun isReachable(bytes: Int): Boolean {
+            val corrupted = parseInput(input, bytes)
+            val graph = createGraph(corrupted, fieldSize)
+
+            return try {
+                graph.findPath(graph.start, graph.end)
+                true
+            } catch (_: IllegalArgumentException) {
+                false
+            }
+        }
+
+        val firstError = ((startingBytes + 1)..input.size).first { bytes -> !isReachable(bytes) }
+        val coordinates = input[firstError - 1]
+        return coordinates
     }
 
     val testInput = readInput("Day18_test")
@@ -61,7 +75,8 @@ fun main() {
     val input = readInput("Day18")
     part1(input, 70, 1024).println()
 
-    part2(input, 70).println()
+    check(part2(testInput, 6, 12) == "6,1")
+    part2(input, 70, 1024).println()
 }
 
 private fun YX.toMemoryPosition() = MemoryPosition(this.y, this.x)
