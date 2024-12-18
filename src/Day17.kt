@@ -1,4 +1,4 @@
-import kotlin.math.pow
+import java.math.BigInteger
 
 fun main() {
 
@@ -6,7 +6,7 @@ fun main() {
         val (registersString, programString) = input.split("\n\n")
 
         val (a, b, c) = registersString.lines()
-            .map { it.substringAfter(": ").toInt() }
+            .map { it.substringAfter(": ").toBigInteger() }
 
         val program = programString.substringAfter(": ").split(",").map { it.toInt() }
 
@@ -20,8 +20,50 @@ fun main() {
         return vm.output.joinToString(",") { it.toString() }
     }
 
-    fun part2(input: String): String {
-        TODO()
+    fun part2(input: String): BigInteger {
+        val (baseVM, program) = parseInput(input)
+
+        fun bruteforce(): Int {
+            repeat(Int.MAX_VALUE) { a ->
+                val vm = baseVM.copy()
+                vm.a = a.toBigInteger()
+                vm.runUntilHalt(program)
+
+                if (vm.output == program) {
+                    return a
+                }
+            }
+
+            throw IllegalStateException("Result not found")
+        }
+
+        fun guessNthNumber(base: BigInteger, n: Int): Int { // only works for programs with a = a % 8
+            (0..500000).forEach { guess ->
+                val vm = baseVM.copy()
+                vm.a = base + guess.toBigInteger()
+                vm.runUntilHalt(program)
+
+                if (vm.output.takeLast(n) == program.takeLast(n)) {
+                    return guess
+                }
+            }
+
+            throw IllegalStateException("Could not find a solution for ${n}th number")
+        }
+
+        if (program.size < 8) {
+            return bruteforce().toBigInteger()
+        }
+
+        var result = BigInteger.ZERO
+
+        repeat(program.size) {
+            result = result * BigInteger.valueOf(8)
+            val guess = guessNthNumber(result, it + 1)
+            result = result + guess.toBigInteger()
+        }
+
+        return result
     }
 
     val testInput = readEntireInput("Day17_test")
@@ -30,13 +72,15 @@ fun main() {
     val input = readEntireInput("Day17")
     part1(input).println()
 
+    val testInput2 = readEntireInput("Day17_test2")
+    check(part2(testInput2) == BigInteger.valueOf(117440))
     part2(input).println()
 }
 
 private class VM(
-    var a: Int,
-    var b: Int,
-    var c: Int
+    var a: BigInteger,
+    var b: BigInteger,
+    var c: BigInteger
 ) {
 
     private var ip: Int = 0
@@ -47,7 +91,7 @@ private class VM(
         while (ip < program.size) {
             val currentIp = ip
             val instruction = program[currentIp]
-            val operand = program[currentIp + 1]
+            val operand = program[currentIp + 1].toBigInteger()
 
             execute(instruction, operand)
 
@@ -58,7 +102,7 @@ private class VM(
         }
     }
 
-    private fun execute(instruction: Int, operand: Int) {
+    private fun execute(instruction: Int, operand: BigInteger) {
         when (instruction) {
             0 -> adv(unpackComboOperand(operand))
             1 -> bxl(operand)
@@ -72,51 +116,53 @@ private class VM(
         }
     }
 
-    private fun unpackComboOperand(operand: Int): Int {
+    private fun unpackComboOperand(operand: BigInteger): BigInteger {
         return when (operand) {
-            in 0..3 -> operand
-            4 -> a
-            5 -> b
-            6 -> c
-            7 -> throw IllegalArgumentException("Operand 7 is reserved")
+            BigInteger.ZERO, BigInteger.ONE, BigInteger.TWO, BigInteger.valueOf(3) -> operand
+            BigInteger.valueOf(4) -> a
+            BigInteger.valueOf(5) -> b
+            BigInteger.valueOf(6) -> c
+            BigInteger.valueOf(7) -> throw IllegalArgumentException("Operand 7 is reserved")
             else -> throw IllegalArgumentException("Invalid operand $operand")
         }
     }
 
-    private fun adv(operand: Int) {
-        a = a / (2.0.pow(operand).toInt())
+    private fun adv(operand: BigInteger) {
+        a = a / (BigInteger.TWO.pow(operand.toInt()))
     }
 
-    private fun bxl(operand: Int) {
+    private fun bxl(operand: BigInteger) {
         b = b xor operand
     }
 
-    private fun bst(operand: Int) {
-        b = operand % 8
+    private fun bst(operand: BigInteger) {
+        b = operand % 8.toBigInteger()
     }
 
-    private fun jnz(operand: Int) {
-        if (a == 0) {
+    private fun jnz(operand: BigInteger) {
+        if (a == BigInteger.ZERO) {
             return
         }
 
-        ip = operand
+        ip = operand.toInt()
     }
 
     private fun bxc() {
         b = b xor c
     }
 
-    private fun out(operand: Int) {
-        output.add(operand % 8)
+    private fun out(operand: BigInteger) {
+        output.add((operand % 8.toBigInteger()).toInt())
     }
 
-    private fun bdv(operand: Int) {
-        b = a / (2.0.pow(operand).toInt())
+    private fun bdv(operand: BigInteger) {
+        b = a / (BigInteger.TWO.pow(operand.toInt()))
     }
 
-    private fun cdv(operand: Int) {
-        c = a / (2.0.pow(operand).toInt())
+    private fun cdv(operand: BigInteger) {
+        c = a / (BigInteger.TWO.pow(operand.toInt()))
     }
+
+    fun copy() = VM(a, b, c)
 
 }
