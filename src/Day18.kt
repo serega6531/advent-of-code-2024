@@ -14,10 +14,10 @@ fun main() {
         DirectionOffset(0, -1)
     )
 
-    fun parseInput(input: List<String>, bytes: Int): Set<YX> {
-        return input.take(bytes)
+    fun parseInput(input: List<String>): List<YX> {
+        return input
             .map { it.split(',') }
-            .mapTo(mutableSetOf()) { (x, y) -> YX(y.toInt(), x.toInt()) }
+            .map { (x, y) -> YX(y.toInt(), x.toInt()) }
     }
 
     fun createGraph(corrupted: Set<YX>, fieldSize: Int): MemoryGraph {
@@ -44,7 +44,7 @@ fun main() {
     }
 
     fun part1(input: List<String>, fieldSize: Int, bytes: Int): Int {
-        val corrupted = parseInput(input, bytes)
+        val corrupted = parseInput(input).take(bytes).toSet()
         val graph = createGraph(corrupted, fieldSize)
         val (_, cost) = graph.findPath(graph.start, graph.end)
 
@@ -52,21 +52,30 @@ fun main() {
     }
 
     fun part2(input: List<String>, fieldSize: Int, startingBytes: Int): String {
-        fun isReachable(bytes: Int): Boolean {
-            val corrupted = parseInput(input, bytes)
-            val graph = createGraph(corrupted, fieldSize)
+        val corrupted = parseInput(input)
 
-            return try {
-                graph.findPath(graph.start, graph.end)
-                true
-            } catch (_: IllegalArgumentException) {
-                false
+        fun findFirstError(): YX {
+            var lastPath: List<MemoryPosition>? = null
+
+            corrupted.drop(startingBytes).forEachIndexed { bytes, newCorrupted ->
+                if (lastPath == null || lastPath.any { it.y == newCorrupted.y && it.x == newCorrupted.x }) {
+                    val currentCorrupted = corrupted.take(startingBytes + bytes + 1).toSet()
+                    val graph = createGraph(currentCorrupted, fieldSize)
+
+                    try {
+                        val (path, _) = graph.findPath(graph.start, graph.end)
+                        lastPath = path
+                    } catch (_: IllegalArgumentException) {
+                        return newCorrupted
+                    }
+                }
             }
+
+            throw IllegalStateException("No error found")
         }
 
-        val firstError = ((startingBytes + 1)..input.size).first { bytes -> !isReachable(bytes) }
-        val coordinates = input[firstError - 1]
-        return coordinates
+        val firstError = findFirstError()
+        return "${firstError.x},${firstError.y}"
     }
 
     val testInput = readInput("Day18_test")
