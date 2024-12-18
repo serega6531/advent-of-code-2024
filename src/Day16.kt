@@ -1,5 +1,4 @@
 import kotlin.collections.Map
-import kotlin.math.abs
 
 fun main() {
     val cardinals = listOf<DirectionOffset>(
@@ -50,14 +49,14 @@ fun main() {
                         val a2 = MazePosition(neighbor.y, neighbor.x, DirectionOffset(-dy, -dx))
                         val b2 = MazePosition(yx.y, yx.x, DirectionOffset(-dy, -dx))
 
-                        add(MazeStep(a1, b1))
-                        add(MazeStep(a2, b2))
+                        add(MazeStep(a1, b1, 1))
+                        add(MazeStep(a2, b2, 1))
                     }
 
                     val position = MazePosition(yx.y, yx.x, direction)
                     val adjacent = adjacentDirections.getValue(direction)
-                    add(MazeStep(position, position.copy(direction = adjacent.first)))
-                    add(MazeStep(position, position.copy(direction = adjacent.second)))
+                    add(MazeStep(position, position.copy(direction = adjacent.first), 1000))
+                    add(MazeStep(position, position.copy(direction = adjacent.second), 1000))
                 }
             }
         }
@@ -87,14 +86,24 @@ fun main() {
     fun part1(input: List<String>): Int {
         val graph = createGraph(input)
         val start = MazePosition(graph.start.y, graph.start.x, DirectionOffset(0, 1))
-        val end = MazePosition(graph.end.y, graph.end.x, DirectionOffset(0, 1))
-        val (path, cost) = graph.findPath(start, end)
-        val lastTurns = countLastTurns(path)
-        return cost - (lastTurns * 1000) - 1
+        val ends = cardinals.map { MazePosition(graph.end.y, graph.end.x, it) }.toSet()
+        val result = graph.findShortestPath(start, ends)
+        val paths = result.shortestPaths()
+        val distance = result.shortestDistance()!!
+
+        val lastTurns = countLastTurns(paths.first())
+        return distance - (lastTurns * 1000)
     }
 
     fun part2(input: List<String>): Int {
-        TODO()
+        val graph = createGraph(input)
+        val start = MazePosition(graph.start.y, graph.start.x, DirectionOffset(0, 1))
+        val ends = cardinals.map { MazePosition(graph.end.y, graph.end.x, it) }.toSet()
+        val result = graph.findShortestPath(start, ends)
+        val paths = result.shortestPaths()
+
+        val tiles: Set<YX> = paths.flatMapTo(mutableSetOf()) { path -> path.map { YX(it.y, it.x) } }
+        return tiles.size
     }
 
     val testInput = readInput("Day16_test")
@@ -106,35 +115,20 @@ fun main() {
     val input = readInput("Day16")
     part1(input).println()
 
-    check(part1(testInput) == 45)
-    check(part1(testInput2) == 64)
+    check(part2(testInput) == 45)
+    check(part2(testInput2) == 64)
     part2(input).println()
 }
 
 private data class MazePosition(val y: Int, val x: Int, val direction: DirectionOffset) : Graph.Vertex
 
-private data class MazeStep(override val a: MazePosition, override val b: MazePosition) : Graph.Edge<MazePosition>
+private data class MazeStep(
+    override val a: MazePosition,
+    override val b: MazePosition,
+    override val distance: Int
+) : Graph.Edge<MazePosition>
 
-private class MazeGraph(edges: List<MazeStep>, val start: YX, val end: YX) : AlgorithmAStar<MazePosition, MazeStep>(edges) {
-    override fun costToMoveThrough(edge: MazeStep): Int {
-        val (a, b) = edge
-
-        val dist = abs(a.y - b.y) + abs(a.x - b.x)
-        if (dist <= 1) {
-            return if (a.direction != b.direction) {
-                1000
-            } else {
-                1
-            }
-        }
-
-        return dist
-    }
-
-    override fun createEdge(from: MazePosition, to: MazePosition): MazeStep {
-        return MazeStep(from, to)
-    }
-}
+private class MazeGraph(edges: List<MazeStep>, val start: YX, val end: YX) : DijstraAlgorithm<MazePosition, MazeStep>(edges)
 
 // Updated A* code from https://github.com/GustavoHGAraujo/kotlin-a-star-algorithm
 
@@ -143,97 +137,89 @@ private interface Graph {
     interface Edge<T : Vertex> {
         val a: T
         val b: T
+        val distance: Int
     }
 }
 
-private abstract class AlgorithmAStar<V : Graph.Vertex, E : Graph.Edge<V>>(
-    val edges: List<E>
-) : Graph {
+// https://gist.github.com/trygvea/6067a744ee67c2f0447c3c7f5b715d62
+private abstract class DijstraAlgorithm<V : Graph.Vertex, E : Graph.Edge<V>>(val edges: List<E>) {
+    /**
+     * See https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
+     */
+    fun findShortestPath(source: V, targets: Set<V>): ShortestPathResult<V> {
+         val dist = mutableMapOf<V, Int>()
+        val prev = mutableMapOf<V, MutableSet<V>>()
+        val q = findDistinctVs(edges)
+        var shortestPathLength = Integer.MAX_VALUE
 
-    private val neighbors: Map<V, Set<V>> = calculateNeighbors()
-
-    private fun calculateNeighbors(): Map<V, Set<V>> {
-        val result = mutableMapOf<V, MutableSet<V>>()
-
-        edges.forEach {
-            val list = result.computeIfAbsent(it.a) { mutableSetOf() }
-            list.add(it.b)
+        q.forEach { v ->
+            dist[v] = Integer.MAX_VALUE
+            prev[v] = mutableSetOf()
         }
+        dist[source] = 0
 
-        return result
-    }
-    private val E.cost: Int
-        get() = costToMoveThrough(this)
+        while (q.isNotEmpty()) {
+            val u = q.minBy { dist[it] ?: 0 }
+            q.remove(u)
 
-    private fun findRoute(from: V, to: V): E? {
-        return edges.find {
-            it.a == from && it.b == to
-        }
-    }
-
-    private fun findRouteOrElseCreateIt(from: V, to: V): E {
-        return findRoute(from, to) ?: createEdge(from, to)
-    }
-
-    private fun generatePath(currentPos: V, cameFrom: Map<V, V>): List<V> {
-        val path = mutableListOf(currentPos)
-        var current = currentPos
-
-        while (cameFrom.containsKey(current)) {
-            current = cameFrom.getValue(current)
-            path.add(0, current)
-        }
-        return path.toList()
-    }
-
-    abstract fun costToMoveThrough(edge: E): Int
-    abstract fun createEdge(from: V, to: V): E
-
-    fun findPath(begin: V, end: V): Pair<List<V>, Int> {
-        val cameFrom = mutableMapOf<V, V>()
-
-        val openVertices = mutableSetOf(begin)
-        val closedVertices = mutableSetOf<V>()
-
-        val costFromStart = mutableMapOf(begin to 0)
-
-        val estimatedRoute = findRouteOrElseCreateIt(from = begin, to = end)
-        val estimatedTotalCost = mutableMapOf(begin to estimatedRoute.cost)
-
-        while (openVertices.isNotEmpty()) {
-            val currentPos = openVertices.minBy { estimatedTotalCost.getValue(it) }
-
-            // Check if we have reached the finish
-            if (currentPos == end) {
-                // Backtrack to generate the most efficient path
-                val path = generatePath(currentPos, cameFrom)
-
-                // First Route to finish will be optimum route
-                return Pair(path, estimatedTotalCost.getValue(end))
+            if ((dist[u] ?: 0) > shortestPathLength) {
+                break
             }
 
-            // Mark the current vertex as closed
-            openVertices.remove(currentPos)
-            closedVertices.add(currentPos)
-
-            (neighbors.getValue(currentPos) - closedVertices).forEach { neighbour ->
-                val routeCost = findRouteOrElseCreateIt(from = currentPos, to = neighbour).cost
-                val cost: Int = costFromStart.getValue(currentPos) + routeCost
-
-                if (cost < costFromStart.getOrDefault(neighbour, Int.MAX_VALUE)) {
-                    if (!openVertices.contains(neighbour)) {
-                        openVertices.add(neighbour)
+            if (u in targets) {
+                shortestPathLength = dist.getValue(u)
+            }
+            edges
+                .filter { it.a == u }
+                .forEach { edge ->
+                    val v = edge.b
+                    val alt = (dist[u] ?: 0) + edge.distance
+                    val currentDist = dist[v] ?: 0
+                    if (alt < currentDist) {
+                        dist[v] = alt
+                        prev[v] = mutableSetOf(u)
+                    } else if (alt == currentDist) {
+                        prev.getValue(v).add(u)
                     }
-
-                    cameFrom[neighbour] = currentPos
-                    costFromStart[neighbour] = cost
-
-                    val estimatedRemainingRouteCost = findRouteOrElseCreateIt(from = neighbour, to = end).cost
-                    estimatedTotalCost[neighbour] = cost + estimatedRemainingRouteCost
                 }
-            }
         }
 
-        throw IllegalArgumentException("No Path from Start $begin to Finish $end")
+        return ShortestPathResult(prev, dist, source, targets)
+    }
+
+    private fun findDistinctVs(edges: List<E>): MutableSet<V> {
+        val nodes = mutableSetOf<V>()
+        edges.forEach {
+            nodes.add(it.a)
+            nodes.add(it.b)
+        }
+        return nodes
+    }
+
+    class ShortestPathResult<V : Graph.Vertex>(val prev: Map<V, Set<V>>, val dist: Map<V, Int>, val source: V, val targets: Set<V>) {
+
+        fun shortestPaths(): List<List<V>> {
+            val shortest = shortestDistance() ?: return emptyList()
+            val reachedTargets = targets.filter { dist[it] == shortest }
+            return reachedTargets.flatMap { shortestPaths(source, it, emptyList()) }
+        }
+
+        private fun shortestPaths(from: V, to: V, list: List<V>): List<List<V>> {
+            val last = prev[to]?.takeIf { it.isNotEmpty() } ?: return if (from == to) {
+                listOf(list + to)
+            } else {
+                emptyList()
+            }
+
+            return last.flatMap { shortestPaths(from, it, list) }.map { it + to }
+        }
+
+        fun shortestDistance(): Int? {
+            val shortest = targets.minOf { dist.getValue(it) }
+            if (shortest == Integer.MAX_VALUE) {
+                return null
+            }
+            return shortest
+        }
     }
 }
