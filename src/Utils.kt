@@ -68,3 +68,10 @@ data class YX(val y: Int, val x: Int) {
 }
 
 data class DirectionOffset(val dy: Int, val dx: Int)
+
+val cardinals = listOf<DirectionOffset>(
+    DirectionOffset(-1, 0),
+    DirectionOffset(0, 1),
+    DirectionOffset(1, 0),
+    DirectionOffset(0, -1)
+)

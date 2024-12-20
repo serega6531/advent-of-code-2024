@@ -1,13 +1,6 @@
 import kotlin.collections.Map
 
 fun main() {
-    val cardinals = listOf<DirectionOffset>(
-        DirectionOffset(-1, 0),
-        DirectionOffset(0, 1),
-        DirectionOffset(1, 0),
-        DirectionOffset(0, -1)
-    )
-
     fun createGraph(input: List<String>): MazeGraph {
         val adjacentDirections = mapOf(
             cardinals[0] to Pair(cardinals[1], cardinals[3]),

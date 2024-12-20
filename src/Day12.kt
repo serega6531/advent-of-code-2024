@@ -1,12 +1,5 @@
 fun main() {
 
-    val cardinals = listOf<DirectionOffset>(
-        DirectionOffset(-1, 0),
-        DirectionOffset(0, 1),
-        DirectionOffset(1, 0),
-        DirectionOffset(0, -1)
-    )
-
     val diagonals = listOf<DirectionOffset>(
         DirectionOffset(-1, -1),
         DirectionOffset(-1, 1),
