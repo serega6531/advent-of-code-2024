@@ -1,13 +1,7 @@
 fun main() {
 
     fun findStart(map: List<String>): YX {
-        map.forEachIndexed { y, x, ch ->
-            if (ch == '^') {
-                return YX(y, x)
-            }
-        }
-
-        throw IllegalArgumentException()
+        return map.findCoordinate('^')
     }
 
     fun withinBounds(y: Int, x: Int, map: List<String>): Boolean {

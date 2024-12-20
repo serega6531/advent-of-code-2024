@@ -17,23 +17,11 @@ fun main() {
         )
 
         fun findStart(): YX {
-            input.forEachIndexed { y, x, ch ->
-                if (ch == 'S') {
-                    return YX(y, x)
-                }
-            }
-
-            throw IllegalArgumentException()
+            return input.findCoordinate('S')
         }
 
         fun findEnd(): YX {
-            input.forEachIndexed { y, x, ch ->
-                if (ch == 'E') {
-                    return YX(y, x)
-                }
-            }
-
-            throw IllegalArgumentException()
+            return input.findCoordinate('E')
         }
 
         fun prepareEdges(yx: YX): List<MazeStep> {
