@@ -33,45 +33,68 @@ fun main() {
         return result
     }
 
-    fun countCheatsThroughWall(wall: YX, distances: Map<YX, Int>, minSave: Int): Int {
-        return cardinals.sumOf { firstDirection ->
-            (cardinals - firstDirection).count { secondDirection ->
-                val a = distances[wall + firstDirection]
-                val b = distances[wall + secondDirection]
+    fun calculateSave(from: YX, to: YX, distances: Map<YX, Int>): Int? {
+        val a = distances[from] ?: return null
+        val b = distances[to] ?: return null
 
-                if (a != null && b != null && a < b) {
-                    val save = b - a - 2
+        val distance = from.distanceTo(to)
 
-                    save >= minSave
-                } else {
-                    false
-                }
+        val save = b - a - distance
+        return save
+    }
+
+    fun isValidCheat(
+        from: YX,
+        to: YX,
+        cheatDistance: Int,
+        distances: Map<YX, Int>,
+        minSave: Int
+    ): Boolean {
+        return if (from != to && from.distanceTo(to) <= cheatDistance) {
+            val save = calculateSave(from, to, distances)
+
+            save != null && save >= minSave
+        } else {
+            false
+        }
+    }
+
+    fun countCheatsFrom(input: List<String>, from: YX, cheatDistance: Int, minSave: Int, distances: Map<YX, Int>): Int {
+        if (input[from] == '#') {
+            return 0
+        }
+
+        val minY = (from.y - cheatDistance).coerceAtLeast(0)
+        val maxY = (from.y + cheatDistance).coerceAtMost(input.lastIndex)
+        val minX = (from.x - cheatDistance).coerceAtLeast(0)
+        val maxX = (from.x + cheatDistance).coerceAtMost(input.first().lastIndex)
+
+        return (minY..maxY).sumOf { toY ->
+            (minX..maxX).count { toX ->
+                val to = YX(toY, toX)
+                isValidCheat(from, to, cheatDistance, distances, minSave)
             }
         }
     }
 
-    fun countCheats(input: List<String>, distances: Map<YX, Int>, minSave: Int): Int {
-        return input.withIndex().sumOf { (y, line) ->
-            line.withIndex().sumOf { (x, ch) ->
-                if (input[y][x] == '#') {
-                    countCheatsThroughWall(YX(y, x), distances, minSave)
-                } else {
-                    0
-                }
+    fun solve(input: List<String>, minSave: Int, cheatDistance: Int): Int {
+        val start = findStart(input)
+        val end = findEnd(input)
+        val distances = buildDistanceMap(input, start, end)
+
+        return input.indices.sumOf { y ->
+            input.first().indices.sumOf { x ->
+                countCheatsFrom(input, YX(y, x), cheatDistance, minSave, distances)
             }
         }
     }
 
     fun part1(input: List<String>, minSave: Int): Int {
-        val start = findStart(input)
-        val end = findEnd(input)
-        val distances = buildDistanceMap(input, start, end)
-
-        return countCheats(input, distances, minSave)
+        return solve(input, minSave, 2)
     }
 
     fun part2(input: List<String>, minSave: Int): Int {
-        TODO()
+        return solve(input, minSave, 20)
     }
 
     val testInput = readInput("Day20_test")

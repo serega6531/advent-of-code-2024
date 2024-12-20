@@ -1,6 +1,7 @@
 
 import kotlin.io.path.Path
 import kotlin.io.path.readText
+import kotlin.math.abs
 
 /**
  * Reads lines from the given input txt file.
@@ -60,6 +61,11 @@ fun <T: Any> List<T?>.asNotNull(): List<T> {
 }
 
 data class YX(val y: Int, val x: Int) {
+
+    fun distanceTo(other: YX): Int {
+        return abs(x - other.x) + abs(y - other.y)
+    }
+
     override fun toString(): String = "($y, $x)"
 
     operator fun plus(dir: DirectionOffset): YX {
