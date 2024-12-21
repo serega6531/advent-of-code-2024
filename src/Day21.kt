@@ -4,19 +4,25 @@ import kotlin.math.abs
 
 fun main() {
 
-    fun getParentCodeLength(code: List<Char>, keypads: List<Keypad>): Int {
+    fun getParentCodeLength(code: List<Char>, keypads: List<Keypad>, cache: MutableMap<CacheKey, Long>): Long {
         val first = keypads.first()
         val parents = keypads.drop(1)
 
-        return code.sumOf {
+        val cacheKey = CacheKey(first, code)
+        cache[cacheKey]?.let { return it }
+
+        val result = code.sumOf {
             val parentCodePart = first.generateCodeToMoveTo(it)
 
             if (parents.isNotEmpty()) {
-                getParentCodeLength(parentCodePart, parents)
+                getParentCodeLength(parentCodePart, parents, cache)
             } else {
-                parentCodePart.size
+                parentCodePart.size.toLong()
             }
         }
+
+        cache[cacheKey] = result
+        return result
     }
 
     fun generateKeypads(directionalKeypads: Int): List<Keypad> {
@@ -27,35 +33,40 @@ fun main() {
         }
     }
 
-    fun getFullCodeLength(code: String, directionalKeypads: Int): Int {
+    fun getFullCodeLength(code: String, directionalKeypads: Int): Long {
         val keypads = generateKeypads(directionalKeypads)
 
-        return getParentCodeLength(code.toList(), keypads)
+        return getParentCodeLength(code.toList(), keypads, cache = mutableMapOf())
     }
 
-    fun getComplexity(code: String, directionalKeypads: Int): Int {
+    fun getComplexity(code: String, directionalKeypads: Int): Long {
         val length = getFullCodeLength(code, directionalKeypads)
         val numericPart = code.dropLast(1).toInt()
 
         return length * numericPart
     }
 
-    fun part1(input: List<String>): Int {
+    fun part1(input: List<String>): Long {
         return input.sumOf { getComplexity(it, 2) }
     }
 
-    fun part2(input: List<String>): Int {
+    fun part2(input: List<String>): Long {
         return input.sumOf { getComplexity(it, 25) }
     }
 
     val testInput = readInput("Day21_test")
-    check(part1(testInput) == 126384)
+    check(part1(testInput) == 126384L)
 
     val input = readInput("Day21")
     part1(input).println()
 
     part2(input).println()
 }
+
+private data class CacheKey(
+    val keypad: Keypad,
+    val code: List<Char>
+)
 
 private abstract class Keypad(val layout: List<List<Char?>>) {
 
