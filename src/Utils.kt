@@ -42,6 +42,16 @@ fun Iterable<String>.findCoordinate(target: Char): YX {
     throw IllegalArgumentException()
 }
 
+fun <T> Iterable<Iterable<T>>.findCoordinate(target: T): YX {
+    this.forEachIndexed { y, x, ch ->
+        if (ch == target) {
+            return YX(y, x)
+        }
+    }
+
+    throw IllegalArgumentException()
+}
+
 fun List<String>.inBounds(yx: YX): Boolean {
     val (y, x) = yx
     val maxY = this.lastIndex
