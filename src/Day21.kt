@@ -4,41 +4,48 @@ import kotlin.math.abs
 
 fun main() {
 
-    tailrec fun getParentCode(code: List<Char>, keypads: List<Keypad>): List<Char> {
+    fun getParentCodeLength(code: List<Char>, keypads: List<Keypad>): Int {
         val first = keypads.first()
         val parents = keypads.drop(1)
-        val parentCode = code.flatMap { first.generateCodeToMoveTo(it) }
 
-        return if (parents.isNotEmpty()) {
-            getParentCode(parentCode, parents)
-        } else {
-            parentCode
+        return code.sumOf {
+            val parentCodePart = first.generateCodeToMoveTo(it)
+
+            if (parents.isNotEmpty()) {
+                getParentCodeLength(parentCodePart, parents)
+            } else {
+                parentCodePart.size
+            }
         }
     }
 
-    fun getFullCode(code: String, generateKeypads: () -> List<Keypad>): List<Char> {
-        val keypads = generateKeypads()
+    fun generateKeypads(directionalKeypads: Int): List<Keypad> {
+        return buildList {
+            add(NumericKeypad())
 
-        return getParentCode(code.toList(), keypads)
+            repeat(directionalKeypads) { add(DirectionalKeypad()) }
+        }
     }
 
-    fun getComplexity(code: String, generateKeypads: () -> List<Keypad>): Int {
-        val fullCode = getFullCode(code, generateKeypads)
+    fun getFullCodeLength(code: String, directionalKeypads: Int): Int {
+        val keypads = generateKeypads(directionalKeypads)
+
+        return getParentCodeLength(code.toList(), keypads)
+    }
+
+    fun getComplexity(code: String, directionalKeypads: Int): Int {
+        val length = getFullCodeLength(code, directionalKeypads)
         val numericPart = code.dropLast(1).toInt()
 
-        return fullCode.size * numericPart
+        return length * numericPart
     }
 
     fun part1(input: List<String>): Int {
-        fun generateKeypads(): List<Keypad> {
-            return listOf(NumericKeypad(), DirectionalKeypad(), DirectionalKeypad())
-        }
-
-        return input.sumOf { getComplexity(it, ::generateKeypads) }
+        return input.sumOf { getComplexity(it, 2) }
     }
 
     fun part2(input: List<String>): Int {
-        TODO()
+        return input.sumOf { getComplexity(it, 25) }
     }
 
     val testInput = readInput("Day21_test")
