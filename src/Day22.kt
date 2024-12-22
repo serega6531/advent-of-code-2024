@@ -1,3 +1,5 @@
+import kotlin.collections.Map
+
 fun main() {
 
     fun getNext(prev: Long): Long {
@@ -7,26 +9,51 @@ fun main() {
         return c.toLong()
     }
 
-    fun getRandomSequence(seed: Long) = generateSequence(seed, ::getNext)
+    fun getRandomSequence(seed: Long, length: Int) = generateSequence(seed, ::getNext).take(length + 1)
 
-    fun solve(input: List<Long>): Long {
-        return input.map { getRandomSequence(it) }
-            .sumOf { it.drop(2000).first() }
+    fun getPriceSequence(seed: Long, length: Int) = getRandomSequence(seed, length).map { it.mod(10) }
+
+    fun part1(input: List<String>, sequenceLength: Int): Long {
+        fun solve(seed: Long): Long {
+            val seq = getRandomSequence(seed, sequenceLength)
+            return seq.drop(2000).first()
+        }
+
+        return input.map { it.toLong() }
+            .sumOf { solve(it) }
     }
 
-    fun part1(input: List<String>): Long {
-        return solve(input.map { it.toLong() })
-    }
+    fun part2(input: List<String>, sequenceLength: Int): Int {
+        fun buildPrefixesMap(seed: Long): Map<Prefix, Int> {
+            return HashMap<Prefix, Int>(sequenceLength).apply {
+                getPriceSequence(seed, sequenceLength)
+                    .zipWithNext { a, b -> b to (b - a) }
+                    .windowed(4)
+                    .map { window ->
+                        val price = window.last().first
+                        val prefixes = window.map { it.second }
+                        prefixes to price
+                    }.forEach { (prefixes, price) -> putIfAbsent(prefixes, price) }
+            }
+        }
 
-    fun part2(input: List<String>): Long {
-        TODO()
+        val seeds = input.map { it.toLong() }
+        val prefixesToPrices: List<Map<Prefix, Int>> = seeds.map { buildPrefixesMap(it) }
+        val uniquePrefixes: Set<Prefix> = prefixesToPrices.flatMap { it.keys }.toSet()
+
+        return uniquePrefixes.maxOf { prefix -> prefixesToPrices.sumOf { it.getOrDefault(prefix, 0) } }
     }
 
     val testInput = readInput("Day22_test")
-    check(part1(testInput) == 37327623L)
+    check(part1(testInput, 2000) == 37327623L)
 
     val input = readInput("Day22")
-    part1(input).println()
+    part1(input, 2000).println()
 
-    part2(input).println()
+    val testInput2 = readInput("Day22_test2")
+    check(part2(listOf("123"), 10) == 6)
+    check(part2(testInput2, 2000) == 23)
+    part2(input, 2000).println()
 }
+
+private typealias Prefix = List<Int>
