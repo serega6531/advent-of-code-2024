@@ -7,21 +7,25 @@ fun main() {
             .map { Pair(it[0], it[1]) }
     }
 
-    fun buildConnectionsMap(connections: List<Pair<String, String>>): Map<String, List<String>> {
-        return buildMap<String, MutableList<String>> {
+    fun buildConnectionsMap(connections: List<Pair<String, String>>): Map<String, Set<String>> {
+        return buildMap<String, MutableSet<String>> {
             connections.forEach { (left, right) ->
-                computeIfAbsent(left) { mutableListOf() }.add(right)
-                computeIfAbsent(right) { mutableListOf() }.add(left)
+                computeIfAbsent(left) { mutableSetOf() }.add(right)
+                computeIfAbsent(right) { mutableSetOf() }.add(left)
             }
         }.toMap()
     }
 
-    fun isClique(first: String, second: String, third: String, connections: Map<String, List<String>>): Boolean {
+    fun isClique(first: String, second: String, third: String, connections: Map<String, Set<String>>): Boolean {
         fun isConnected(a: String, b: String): Boolean {
             return connections.getValue(a).contains(b)
         }
 
         return isConnected(first, second) && isConnected(second, third) && isConnected(first, third)
+    }
+
+    fun isCorrectName(potentialClique: Triple<String, String, String>): Boolean {
+        return potentialClique.first.startsWith('t') || potentialClique.second.startsWith('t') || potentialClique.third.startsWith('t')
     }
 
     fun part1(input: List<String>): Int {
@@ -33,22 +37,19 @@ fun main() {
             possibleComputers.forEachIndexed { firstIndex, first ->
                 possibleComputers.drop(firstIndex + 1).forEachIndexed { secondIndex, second ->
                     possibleComputers.drop(firstIndex + secondIndex + 2).forEach { third ->
-                        if (isClique(first, second, third, connectionsMap)) {
-                            add(Triple(first, second, third))
+                        val potentialClique = Triple(first, second, third)
+                        if (isCorrectName(potentialClique) && isClique(first, second, third, connectionsMap)) {
+                            add(potentialClique)
                         }
                     }
                 }
             }
         }
 
-        val correctCliques = cliques.filter {
-            it.first.startsWith('t') || it.second.startsWith('t') || it.third.startsWith('t')
-        }
-
-        return correctCliques.size
+        return cliques.size
     }
 
-    fun part2(input: List<String>): Int {
+    fun part2(input: List<String>): String {
         TODO()
     }
 
@@ -58,5 +59,6 @@ fun main() {
     val input = readInput("Day23")
     part1(input).println()
 
+    check(part2(testInput) == "co,de,ka,ta")
     part2(input).println()
 }
