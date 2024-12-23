@@ -16,19 +16,21 @@ fun main() {
         }.toMap()
     }
 
-    fun isClique(first: String, second: String, third: String, connections: Map<String, Set<String>>): Boolean {
-        fun isConnected(a: String, b: String): Boolean {
-            return connections.getValue(a).contains(b)
+    fun part1(input: List<String>): Int {
+        fun isCorrectName(potentialClique: Triple<String, String, String>): Boolean {
+            return potentialClique.first.startsWith('t') ||
+                    potentialClique.second.startsWith('t') ||
+                    potentialClique.third.startsWith('t')
         }
 
-        return isConnected(first, second) && isConnected(second, third) && isConnected(first, third)
-    }
+        fun isClique(first: String, second: String, third: String, connections: Map<String, Set<String>>): Boolean {
+            fun isConnected(a: String, b: String): Boolean {
+                return connections.getValue(a).contains(b)
+            }
 
-    fun isCorrectName(potentialClique: Triple<String, String, String>): Boolean {
-        return potentialClique.first.startsWith('t') || potentialClique.second.startsWith('t') || potentialClique.third.startsWith('t')
-    }
+            return isConnected(first, second) && isConnected(second, third) && isConnected(first, third)
+        }
 
-    fun part1(input: List<String>): Int {
         val connections = parseInput(input)
         val connectionsMap = buildConnectionsMap(connections)
         val possibleComputers = connectionsMap.filterValues { it.size >= 2 }.keys
@@ -50,7 +52,33 @@ fun main() {
     }
 
     fun part2(input: List<String>): String {
-        TODO()
+        val connections = parseInput(input)
+        val connectionsMap = buildConnectionsMap(connections)
+
+        fun bronKerbosh(p: MutableSet<String>, r: Set<String>, x: MutableSet<String>, result: MutableSet<Set<String>>) {
+            if (x.isEmpty() && p.isEmpty()) {
+                result.add(r)
+            }
+
+            p.toList().forEach { v ->
+                val neighbors = connectionsMap.getValue(v)
+                bronKerbosh(p.intersect(neighbors).toMutableSet(), r + v, x.intersect(neighbors).toMutableSet(), result)
+
+                p.remove(v)
+                x.add(v)
+            }
+        }
+
+        fun findMaximumClique(p: Set<String>): Set<String> {
+            val result = mutableSetOf<Set<String>>()
+
+            bronKerbosh(p.toMutableSet(), emptySet(), mutableSetOf(), result)
+
+            return result.maxBy { it.size }
+        }
+
+        val clique = findMaximumClique(connectionsMap.keys)
+        return clique.sorted().joinToString(separator = ",")
     }
 
     val testInput = readInput("Day23_test")
