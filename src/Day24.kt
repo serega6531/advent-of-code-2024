@@ -22,46 +22,46 @@ fun main() {
         return ParsedInput(startingWires, gates)
     }
 
-    fun getOutput(
-        wire: String,
-        wires: MutableMap<String, Boolean>,
-        gateByOutput: Map<String, GateDescription>
-    ): Boolean {
-        fun evaluate(gate: GateDescription): Boolean {
-            val left = getOutput(gate.leftWire, wires, gateByOutput)
-            val right = getOutput(gate.rightWire, wires, gateByOutput)
-
-            return when (gate.operation) {
-                GateOperation.AND -> left && right
-                GateOperation.OR -> left || right
-                GateOperation.XOR -> left xor right
-            }
-        }
-
-        wires[wire]?.let { return it }
-
-        val sourceGate = gateByOutput.getValue(wire)
-        val result = evaluate(sourceGate)
-        wires[wire] = result
-
-        return result
-    }
-
-    fun resultAsString(results: Map<Int, Boolean>): String {
-        return buildString {
-            results.keys.sortedDescending().forEach {
-                append(if (results.getValue(it)) 1 else 0)
-            }
-        }
-    }
-
-    fun collectOutput(results: Map<Int, Boolean>): Long {
-        val asString = resultAsString(results)
-
-        return asString.toLong(2)
-    }
-
     fun part1(input: String): Long {
+        fun getOutput(
+            wire: String,
+            wires: MutableMap<String, Boolean>,
+            gateByOutput: Map<String, GateDescription>
+        ): Boolean {
+            fun evaluate(gate: GateDescription): Boolean {
+                val left = getOutput(gate.leftWire, wires, gateByOutput)
+                val right = getOutput(gate.rightWire, wires, gateByOutput)
+
+                return when (gate.operation) {
+                    GateOperation.AND -> left && right
+                    GateOperation.OR -> left || right
+                    GateOperation.XOR -> left xor right
+                }
+            }
+
+            wires[wire]?.let { return it }
+
+            val sourceGate = gateByOutput.getValue(wire)
+            val result = evaluate(sourceGate)
+            wires[wire] = result
+
+            return result
+        }
+
+        fun resultAsString(results: Map<Int, Boolean>): String {
+            return buildString {
+                results.keys.sortedDescending().forEach {
+                    append(if (results.getValue(it)) 1 else 0)
+                }
+            }
+        }
+
+        fun collectOutput(results: Map<Int, Boolean>): Long {
+            val asString = resultAsString(results)
+
+            return asString.toLong(2)
+        }
+
         val (startingWires, gates) = parseInput(input)
         val gateByOutput = gates.associateBy { gate -> gate.resultWire }
 
@@ -75,54 +75,131 @@ fun main() {
     }
 
     fun part2(input: String): String {
-        fun createStartingWires(prefix: String, value: String): Map<String, Boolean> {
-            return value.mapIndexed { index, c ->
-                (prefix + index.toString().padStart(2, '0')) to (c == '1')
-            }.toMap()
-        }
-
         val (_, gates) = parseInput(input)
-        val gateByOutput = gates.associateBy { gate -> gate.resultWire }
-        val parser = AdderParser(gateByOutput)
 
-        fun findUsedGates(wire: String): Set<GateDescription> {
-            val gate = gateByOutput[wire] ?: return emptySet()
-            return findUsedGates(gate.leftWire) + findUsedGates(gate.rightWire) + gate
-        }
+        fun isValid(wire: String, bit: Int, gatesMap: Map<String, GateDescription>): Boolean {
+            val parser = AdderParser(gatesMap)
 
-        fun hasError(wire: String, bit: Int): Boolean {
-            try {
+            return try {
                 val parsed = parser.parseByName(wire)
-                return parsed is FullAdderSum && parsed.bit == bit
+
+                val validHalfAdder = bit == 0 && parsed is HalfAdderSumOrFullAdderSumXorPart && parsed.bit == bit
+                val validFullAdder = bit > 0 && parsed is FullAdderSum && parsed.bit == bit
+                val validCarry = bit == 45 && parsed is FullAdderCarry && parsed.bit == bit - 1
+                validHalfAdder || validFullAdder || validCarry
             } catch (e: AdderParserException) {
-                return false
+                false
+            } catch (e: StackOverflowError) {
+                false
             }
         }
 
-        val number = "1".repeat(45)
-        val wires = (createStartingWires("x", number) + createStartingWires("y", number)).toMutableMap()
+        fun errorInOperands(wire: String, gatesMap: Map<String, GateDescription>): Boolean {
+            val parser = AdderParser(gatesMap)
 
-        val results = (0..45).associateWith { getOutput("z" + it.toString().padStart(2, '0'), wires, gateByOutput) }
-        val sum = resultAsString(results)
+            return try {
+                parser.parseByName(wire)
+                false
+            } catch (e: AdderParserException) {
+                true
+            }
+        }
 
-        val used = (0..45).associateWith { findUsedGates("z" + it.toString().padStart(2, '0')) }
+        fun swapGatesInMap(
+            errorWire: String,
+            possiblePair: String,
+            gatesMap: Map<String, GateDescription>
+        ): Map<String, GateDescription> {
+            val errorGate = gatesMap.getValue(errorWire)
+            val replacementGate = gatesMap.getValue(possiblePair)
 
+            val updatedErrorGate = errorGate.copy(resultWire = possiblePair)
+            val updatedReplacementGate = replacementGate.copy(resultWire = errorWire)
 
-        val withErrors = (0..45)
-            .filter { hasError("z" + it.toString().padStart(2, '0'), it) }
+            return gatesMap.toMutableMap().apply {
+                set(possiblePair, updatedErrorGate)
+                set(errorWire, updatedReplacementGate)
+            }
+        }
 
-        TODO()
+        fun tryFindPair(
+            errorWire: String,
+            resultWire: String,
+            bit: Int,
+            gatesMap: Map<String, GateDescription>
+        ): Pair<String, String>? {
+            val secondInPair = gatesMap.keys.singleOrNull() { possiblePair ->
+                val updatedMap = swapGatesInMap(errorWire, possiblePair, gatesMap)
+
+                isValid(resultWire, bit, updatedMap)
+            }
+
+            return secondInPair?.let { errorWire to it }
+        }
+
+        fun fixError(
+            errorWire: String,
+            bit: Int,
+            gatesMap: Map<String, GateDescription>,
+            swappedWires: MutableList<String>
+        ): Map<String, GateDescription> {
+            val wiresToSwap = if (errorInOperands(errorWire, gatesMap)) {
+                val errorGate = gatesMap.getValue(errorWire)
+                listOf(errorGate.leftWire, errorGate.rightWire)
+            } else {
+                listOf(errorWire)
+            }
+
+            val (toSwap1, toSwap2) = wiresToSwap.firstNotNullOf { wireToSwap ->
+                tryFindPair(wireToSwap, errorWire, bit, gatesMap)
+            }
+
+            println("Swapping $toSwap1 and $toSwap2 to fix $errorWire")
+            swappedWires.add(toSwap1)
+            swappedWires.add(toSwap2)
+
+            return swapGatesInMap(toSwap1, toSwap2, gatesMap)
+        }
+
+        fun Int.toResultWire() = "z" + this.toString().padStart(2, '0')
+
+        fun findRequiredSwaps(): List<String> {
+            val result = mutableListOf<String>()
+
+            var gatesMap = gates.associateBy { gate -> gate.resultWire }
+            val outputWiresCount = gatesMap.keys
+                .filter { it.startsWith('z') }
+                .maxOf { it.substring(1).toInt() }
+
+            while (true) {
+                val firstNotValid = (0..outputWiresCount)
+                    .associateWith { it.toResultWire() }
+                    .entries
+                    .find { (bit, wire) -> !isValid(wire, bit, gatesMap) }
+
+                if (firstNotValid == null) {
+                    return result
+                }
+
+                val (errorBit, errorWire) = firstNotValid
+
+                gatesMap = fixError(errorWire, errorBit, gatesMap, result)
+            }
+        }
+
+        val requiredSwaps = findRequiredSwaps()
+        return requiredSwaps.sorted().joinToString(separator = ",")
     }
 
     val testInput = readEntireInput("Day24_test")
     val testInput2 = readEntireInput("Day24_test2")
-    //check(part1(testInput) == 4L)
-    //check(part1(testInput2) == 2024L)
+    check(part1(testInput) == 4L)
+    check(part1(testInput2) == 2024L)
 
     val input = readEntireInput("Day24")
-    //part1(input).println()
+    part1(input).println()
 
-    // check(part2(testInput) == "TODO")
+    check(part2(testInput) == "TODO")
     part2(input).println()
 }
 
@@ -143,7 +220,7 @@ private enum class GateOperation {
 }
 
 private class AdderParser(
-   private val gateByOutput: Map<String, GateDescription>
+    private val gateByOutput: Map<String, GateDescription>
 ) {
 
     fun parse(gate: GateDescription): AdderPart {
@@ -193,11 +270,11 @@ private class AdderParser(
         }
 
         if (first is HalfAdderCarry && second is HalfAdderSumOrFullAdderSumXorPart && first.bit + 1 == second.bit) {
-            return FullAdderSumAndPart(second.bit, gate.resultWire)
+            return FullAdderSum(second.bit, gate.resultWire)
         }
 
         if (first is FullAdderCarry && second is HalfAdderSumOrFullAdderSumXorPart && first.bit + 1 == second.bit) {
-            return FullAdderSumAndPart(second.bit, gate.resultWire)
+            return FullAdderSum(second.bit, gate.resultWire)
         }
 
         throw AdderParserException(gate)
@@ -228,7 +305,6 @@ private data class HalfAdderSumOrFullAdderSumXorPart(override val bit: Int, over
 private data class FullAdderCarry(override val bit: Int, override val wire: String) : AdderPart
 private data class FullAdderCarryAndPart(override val bit: Int, override val wire: String) : AdderPart
 private data class FullAdderSum(override val bit: Int, override val wire: String) : AdderPart
-private data class FullAdderSumAndPart(override val bit: Int, override val wire: String) : AdderPart
 private data class X(override val bit: Int, override val wire: String) : AdderPart
 private data class Y(override val bit: Int, override val wire: String) : AdderPart
 
