@@ -77,6 +77,11 @@ fun main() {
     fun part2(input: String): String {
         val (_, gates) = parseInput(input)
 
+        val outputWiresCount = gates
+            .map { it.resultWire }
+            .filter { it.startsWith('z') }
+            .maxOf { it.substring(1).toInt() }
+
         fun isValid(wire: String, bit: Int, gatesMap: Map<String, GateDescription>): Boolean {
             val parser = AdderParser(gatesMap)
 
@@ -85,7 +90,8 @@ fun main() {
 
                 val validHalfAdder = bit == 0 && parsed is HalfAdderSumOrFullAdderSumXorPart && parsed.bit == bit
                 val validFullAdder = bit > 0 && parsed is FullAdderSum && parsed.bit == bit
-                val validCarry = bit == 45 && parsed is FullAdderCarry && parsed.bit == bit - 1
+                val validCarry = bit == outputWiresCount && parsed is FullAdderCarry && parsed.bit == bit - 1
+
                 validHalfAdder || validFullAdder || validCarry
             } catch (e: AdderParserException) {
                 false
@@ -128,7 +134,7 @@ fun main() {
             bit: Int,
             gatesMap: Map<String, GateDescription>
         ): Pair<String, String>? {
-            val secondInPair = gatesMap.keys.singleOrNull() { possiblePair ->
+            val secondInPair = gatesMap.keys.singleOrNull { possiblePair ->
                 val updatedMap = swapGatesInMap(errorWire, possiblePair, gatesMap)
 
                 isValid(resultWire, bit, updatedMap)
@@ -167,9 +173,6 @@ fun main() {
             val result = mutableListOf<String>()
 
             var gatesMap = gates.associateBy { gate -> gate.resultWire }
-            val outputWiresCount = gatesMap.keys
-                .filter { it.startsWith('z') }
-                .maxOf { it.substring(1).toInt() }
 
             while (true) {
                 val firstNotValid = (0..outputWiresCount)
@@ -199,7 +202,6 @@ fun main() {
     val input = readEntireInput("Day24")
     part1(input).println()
 
-    check(part2(testInput) == "TODO")
     part2(input).println()
 }
 
@@ -253,7 +255,7 @@ private class AdderParser(
             return FullAdderCarryAndPart(second.bit, gate.resultWire)
         }
 
-        throw AdderParserException(gate)
+        throw AdderParserException()
     }
 
     private fun parseOr(gate: GateDescription, first: AdderPart, second: AdderPart): AdderPart {
@@ -261,7 +263,7 @@ private class AdderParser(
             return FullAdderCarry(first.bit, gate.resultWire)
         }
 
-        throw AdderParserException(gate)
+        throw AdderParserException()
     }
 
     private fun parseXor(gate: GateDescription, first: AdderPart, second: AdderPart): AdderPart {
@@ -277,7 +279,7 @@ private class AdderParser(
             return FullAdderSum(second.bit, gate.resultWire)
         }
 
-        throw AdderParserException(gate)
+        throw AdderParserException()
     }
 
     private fun sortInputs(left: AdderPart, right: AdderPart): List<AdderPart> {
@@ -308,4 +310,4 @@ private data class FullAdderSum(override val bit: Int, override val wire: String
 private data class X(override val bit: Int, override val wire: String) : AdderPart
 private data class Y(override val bit: Int, override val wire: String) : AdderPart
 
-private class AdderParserException(val gate: GateDescription) : RuntimeException()
+private class AdderParserException : RuntimeException()
