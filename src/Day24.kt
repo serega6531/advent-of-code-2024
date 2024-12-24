@@ -93,7 +93,7 @@ fun main() {
         fun hasError(wire: String, bit: Int): Boolean {
             try {
                 val parsed = parser.parseByName(wire)
-                return parsed is AdderSum && parsed.bit == bit
+                return parsed is FullAdderSum && parsed.bit == bit
             } catch (e: AdderParserException) {
                 return false
             }
@@ -165,23 +165,23 @@ private class AdderParser(
 
     private fun parseAnd(gate: GateDescription, first: AdderPart, second: AdderPart): AdderPart {
         if (first is X && second is Y && first.bit == second.bit) {
-            return HalfAdderCarry(first.bit)
+            return HalfAdderCarry(first.bit, gate.resultWire)
         }
 
-        if (first is AdderSum && second is HalfAdderCarry && first.bit == second.bit + 1) {
-            return FullAdderSumAndPart(first.bit)
+        if (first is HalfAdderCarry && second is HalfAdderSumOrFullAdderSumXorPart && first.bit + 1 == second.bit) {
+            return FullAdderCarryAndPart(second.bit, gate.resultWire)
         }
 
-        if (first is AdderSum && second is FullAdderCarry && first.bit == second.bit + 1) {
-            return FullAdderSumAndPart(first.bit)
+        if (first is FullAdderCarry && second is HalfAdderSumOrFullAdderSumXorPart && first.bit + 1 == second.bit) {
+            return FullAdderCarryAndPart(second.bit, gate.resultWire)
         }
 
         throw AdderParserException(gate)
     }
 
     private fun parseOr(gate: GateDescription, first: AdderPart, second: AdderPart): AdderPart {
-        if (first is FullAdderSumAndPart && second is HalfAdderCarry && first.bit == second.bit) {
-            return FullAdderCarry(first.bit)
+        if (first is FullAdderCarryAndPart && second is HalfAdderCarry && first.bit == second.bit) {
+            return FullAdderCarry(first.bit, gate.resultWire)
         }
 
         throw AdderParserException(gate)
@@ -189,15 +189,15 @@ private class AdderParser(
 
     private fun parseXor(gate: GateDescription, first: AdderPart, second: AdderPart): AdderPart {
         if (first is X && second is Y && first.bit == second.bit) {
-            return AdderSum(first.bit)
+            return HalfAdderSumOrFullAdderSumXorPart(first.bit, gate.resultWire)
         }
 
-        if (first is AdderSum && second is HalfAdderCarry && first.bit == second.bit + 1) {
-            return AdderSum(first.bit)
+        if (first is HalfAdderCarry && second is HalfAdderSumOrFullAdderSumXorPart && first.bit + 1 == second.bit) {
+            return FullAdderSumAndPart(second.bit, gate.resultWire)
         }
 
-        if (first is AdderSum && second is FullAdderCarry && first.bit == second.bit + 1) {
-            return AdderSum(first.bit)
+        if (first is FullAdderCarry && second is HalfAdderSumOrFullAdderSumXorPart && first.bit + 1 == second.bit) {
+            return FullAdderSumAndPart(second.bit, gate.resultWire)
         }
 
         throw AdderParserException(gate)
@@ -210,9 +210,9 @@ private class AdderParser(
     private fun parseVariable(name: String): AdderPart {
         val bit = name.substring(1).toInt()
         return if (name.startsWith('x')) {
-            X(bit)
+            X(bit, name)
         } else {
-            Y(bit)
+            Y(bit, name)
         }
     }
 
@@ -220,13 +220,16 @@ private class AdderParser(
 
 private sealed interface AdderPart {
     val bit: Int
+    val wire: String
 }
 
-private data class HalfAdderCarry(override val bit: Int) : AdderPart
-private data class FullAdderCarry(override val bit: Int) : AdderPart
-private data class FullAdderSumAndPart(override val bit: Int) : AdderPart
-private data class AdderSum(override val bit: Int) : AdderPart
-private data class X(override val bit: Int) : AdderPart
-private data class Y(override val bit: Int) : AdderPart
+private data class HalfAdderCarry(override val bit: Int, override val wire: String) : AdderPart
+private data class HalfAdderSumOrFullAdderSumXorPart(override val bit: Int, override val wire: String) : AdderPart
+private data class FullAdderCarry(override val bit: Int, override val wire: String) : AdderPart
+private data class FullAdderCarryAndPart(override val bit: Int, override val wire: String) : AdderPart
+private data class FullAdderSum(override val bit: Int, override val wire: String) : AdderPart
+private data class FullAdderSumAndPart(override val bit: Int, override val wire: String) : AdderPart
+private data class X(override val bit: Int, override val wire: String) : AdderPart
+private data class Y(override val bit: Int, override val wire: String) : AdderPart
 
 private class AdderParserException(val gate: GateDescription) : RuntimeException()
